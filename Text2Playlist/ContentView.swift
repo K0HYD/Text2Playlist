@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  Text2Playlist
 //
-//  Created by Dale Puckett on 11/7/24.
+//  Created by Dale Puckett on 11/25/24.
 //
 
 import Foundation
@@ -12,6 +12,9 @@ import SwiftUI
 struct ContentView: View {
     @State private var statusMessages: [String] = ["Starting..."]
     @State private var songList: [SongInfo] = []
+    @State private var isPromptingForFilename = false
+    @State private var playlistName: String = ""
+    @State private var foundSongs: [Song] = []
 
     var body: some View {
         VStack {
@@ -31,22 +34,165 @@ struct ContentView: View {
                     await searchAndCreatePlaylist()
                 }
             }
+
+            Button("Create Playlist") {
+                isPromptingForFilename = true
+            }
+            .sheet(isPresented: $isPromptingForFilename) {
+                VStack {
+                    Text("Enter Playlist Name")
+                        .font(.headline)
+                        .padding()
+
+                    TextField("Playlist Name", text: $playlistName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding()
+
+                    HStack {
+                        Button("Cancel") {
+                            isPromptingForFilename = false
+                        }
+                        .padding()
+
+                        Button("Create") {
+                            isPromptingForFilename = false
+                            Task {
+                                await createPlaylistWithName(playlistName, songs: foundSongs)
+                            }
+                        }
+                        .padding()
+                    }
+                }
+                .padding()
+            }
         }
     }
-
-    // Your song list from a text file
-    /* let songList = [
-        SongInfo(title: "I Want to Hold Your Hand", artist: "The Beatles"),
-        SongInfo(title: "She Loves You", artist: "The Beatles"),
-        SongInfo(title: "Hello, Dolly!", artist: "Louis Armstrong"),
-        SongInfo(title: "Oh, Pretty Woman", artist: "Roy Orbison")
-    ] */
 
     struct SongInfo {
         let title: String
         let artist: String
     }
 
+ /*   func loadInitialSongList() {
+        let songData = """
+        "I Want to Hold Your Hand - The Beatles",
+        "She Loves You - The Beatles",
+        "Hello, Dolly! - Louis Armstrong",
+        "Oh, Pretty Woman - Roy Orbison",
+        "I Get Around - The Beach Boys",
+        "Everybody Loves Somebody - Dean Martin"
+        """
+        songList = parseSongList(from: songData)
+    } */
+    
+    // Call parseSongList only once to populate songList without recursion
+    func loadInitialSongList() {
+        let songData = """
+    "Tossin’ and Turnin’ - Bobby Lewis",
+    "I Fall to Pieces - Patsy Cline",
+    "Michael - The Highwaymen",
+    "Crying - Roy Orbison",
+    "Runaway - Del Shannon",
+    "My True Story - The Jive Five",
+    "Pony Time - Chubby Checker",
+    "Wheels - The String-A-Longs",
+    "Raindrops - Dee Clark",
+    "Wooden Heart - Joe Dowell",
+    "Exodus - Ferrante & Teicher",
+    "Take Good Care of My Baby - Bobby Vee",
+    "Calcutta - Lawrence Welk and His Orchestra",
+    "Runaround Sue - Dion",
+    "Quarter to Three - Gary U.S. Bonds",
+    "Travelin’ Man - Ricky Nelson",
+    "Dedicated to the One I Love - The Shirelles",
+    "The Lion Sleeps Tonight - The Tokens",
+    "Blue Moon - The Marcels",
+    "Mother-In-Law - Ernie K-Doe",
+    "Hurt - Timi Yuro",
+    "Please Mr. Postman - The Marvelettes",
+    "Does Your Chewing Gum Lose Its Flavor - Lonnie Donegan",
+    "Hello Mary Lou - Ricky Nelson",
+    "Where the Boys Are - Connie Francis",
+    "Will You Love Me Tomorrow - The Shirelles",
+    "Last Night - The Mar-Keys",
+    "Surrender - Elvis Presley",
+    "Angel Baby - Rosie and the Originals",
+    "Hit the Road Jack - Ray Charles",
+    "A Hundred Pounds of Clay - Gene McDaniels",
+    "Good Time Baby - Bobby Rydell",
+    "Apache - Jørgen Ingmann and His Guitar",
+    "This Time - Troy Shondell",
+    "Please Love Me Forever - Cathy Jean and the Roommates",
+    "Bristol Stomp - The Dovells",
+    "Little Sister - Elvis Presley",
+    "Every Beat of My Heart - Gladys Knight and the Pips",
+    "The Way You Look Tonight - The Lettermen",
+    "Big Bad John - Jimmy Dean",
+    "Moody River - Pat Boone",
+    "Hats Off to Larry - Del Shannon",
+    "Goodbye Cruel World - James Darren",
+    "School Is Out - Gary U.S. Bonds",
+    "The Boll Weevil Song - Brook Benton",
+    "Don’t Bet Money Honey - Linda Scott",
+    "Ya Ya - Lee Dorsey",
+    "Let Me Belong to You - Brian Hyland",
+    "Mexico - Bob Moore and His Orchestra",
+    "Asia Minor - Kokomo",
+    "You Can Depend on Me - Brenda Lee",
+    "Barbara Ann - The Regents",
+    "You Don’t Know What You’ve Got (Until You Lose It) - Ral Donner",
+    "Baby Sittin’ Boogie - Buzz Clifford",
+    "Walk on By - Leroy Van Dyke",
+    "Sad Movies (Make Me Cry) - Sue Thompson",
+    "Tonight (Could Be the Night) - The Velvets",
+    "I Love How You Love Me - The Paris Sisters",
+    "Calendar Girl - Neil Sedaka",
+    "Let There Be Drums - Sandy Nelson",
+    "Without You - Johnny Tillotson",
+    "One Mint Julep - Ray Charles",
+    "Take Five - The Dave Brubeck Quartet",
+    "Dum Dum - Brenda Lee",
+    "Riders in the Sky - Lawrence Welk",
+    "You Must Have Been a Beautiful Baby - Bobby Darin",
+    "Baby Blue - The Echoes",
+    "The Mountain’s High - Dick and Dee Dee",
+    "Tower of Strength - Gene McDaniels",
+    "Fool #1 - Brenda Lee",
+    "Pretty Little Angel Eyes - Curtis Lee",
+    "Rubber Ball - Bobby Vee",
+    "Breakin’ in a Brand New Broken Heart - Connie Francis",
+    "Together - Connie Francis",
+    "Happy Birthday Sweet Sixteen - Neil Sedaka",
+    "Run to Him - Bobby Vee",
+    "Stand by Me - Ben E. King",
+    "Cupid - Sam Cooke",
+    "What a Sweet Thing That Was - The Shirelles",
+    "Tonight My Love, Tonight - Paul Anka",
+    "Flaming Star - Elvis Presley",
+    "Little Devil - Neil Sedaka",
+    "Big John - The Shirelles",
+    "(Marie’s the Name) His Latest Flame - Elvis Presley",
+    "I’m Gonna Knock on Your Door - Eddie Hodges",
+    "Life Is But a Dream - The Harptones",
+    "I Understand - The G-Clefs",
+    "Jimmy’s Girl - Johnny Tillotson",
+    "Somebody Nobody Wants - Dion",
+    "Please Stay - The Drifters",
+    "The Fly - Chubby Checker",
+    "Everlovin’ - Rick Nelson",
+    "Peppermint Twist - Joey Dee and the Starliters",
+    "Little Miss Lonely - Helen Shapiro",
+    "Just Out of Reach (Of My Two Open Arms) - Solomon Burke",
+    "The Bridge of Love - Joe Dowell",
+    "On the Rebound - Floyd Cramer",
+    "A Little Bit of Soap - The Jarmels",
+    "One Track Mind - Bobby Lewis",
+    "Halfway to Paradise - Tony Orlando"
+"""
+        songList = parseSongList(from: songData)
+    }
+
+    
     func requestMusicAuthorization() async {
         let status = await MusicAuthorization.request()
         if status == .authorized {
@@ -56,15 +202,6 @@ struct ContentView: View {
             print("Not authorized to access Apple Music")
             addStatusMessage("Not authorized to access Apple Music")
         }
-    }
-
-    // Call parseSongList only once to populate songList without recursion
-    func loadInitialSongList() {
-        let songData = """
-            "I Want to Hold Your Hand - The Beatles”, “She Loves You - The Beatles";, "Hello  Dolly! - Louis Armstrong”, "Oh, Pretty Woman - Roy Orbison", “I Get Around - The Beach Boys”, “Everybody Loves Somebody - Dean Martin", "My Guy - Mary Wells", "We’ll Sing in the Sunshine - Gale Garnett", "Last Kiss - J. Frank Wilson & The Cavaliers", "Where Did Our Love Go - The Supremes", "People - Barbra Streisand", "Java - Al Hirt", "A Hard Day’s Night - The Beatles", "Love Me Do - The Beatles", "Do Wah Diddy Diddy - Manfred Mann", "Under the Boardwalk - The Drifters", "Chapel of Love - The Dixie Cups", "Suspicion - Terry Stafford", "Glad All Over - The Dave Clark Five", "Rag Doll - The Four Seasons", "Dawn (Go Away) - The Four Seasons", "Dancing in the Street - Martha and the Vandellas", "The Little Old Lady (from Pasadena) - Jan & Dean", "Ain’t That Loving You Baby - Elvis Presley", "Walk On By - Dionne Warwick", "Little Children - Billy J. Kramer & The Dakotas", "Come See About Me - The Supremes", "Because - The Dave Clark Five", "Fun, Fun, Fun - The Beach Boys", "Hey Little Cobra - The Rip Chords", "Let It Be Me - Betty Everett and Jerry Butler", "Twist and Shout - The Beatles", "House of the Rising Sun - The Animals", "G.T.O. - Ronny & the Daytonas", "Bread and Butter - The Newbeats", "Baby Love - The Supremes", "How Do You Do It? - Gerry & The Pacemakers", "It Hurts to Be in Love - Gene Pitney", "Wishin’ and Hopin’ - Dusty Springfield", "You Don’t Own Me - Lesley Gore", "A World Without Love - Peter and Gordon", "Anyone Who Had a Heart - Dionne Warwick", "Don’t Let the Rain Come Down (Crooked Little Man) - The Serendipity Singers", "I’m So Proud - The Impressions", "Java - Al Hirt", "Needles and Pins - The Searchers", "Fun, Fun, Fun - The Beach Boys", "Don’t Let the Sun Catch You Crying - Gerry & The Pacemakers", "Because - The Dave Clark Five", "We’ll Sing in the Sunshine - Gale Garnett", "C’mon and Swim - Bobby Freeman", "Do You Want to Know a Secret - The Beatles", "You Really Got Me - The Kinks", "Diane - The Bachelors", "Memphis - Johnny Rivers", "A Summer Song - Chad & Jeremy", "Remember (Walkin’ in the Sand) - The Shangri-Las", "Surfin’ Bird - The Trashmen", "Dead Man’s Curve - Jan & Dean", "Come a Little Bit Closer - Jay & The Americans", "Navy Blue - Diane Renay", "Little Honda - The Hondells", "Love Me With All Your Heart (Cuando Calienta el Sol) - Ray Charles Singers", "See the Funny Little Clown - Bobby Goldsboro", "I Love You More and More Every Day - Al Martino", "It's Over - Roy Orbison", "Ronnie - The Four Seasons", "Um, Um, Um, Um, Um, Um - Major Lance", "The Shoop Shoop Song (It's in His Kiss) - Betty Everett", "My Boy Lollipop - Millie Small", "Remembering When - The Innocents", "I Saw Her Standing There - The Beatles" ,"When I Grow Up (To Be a Man) - The Beach Boys", "The Girl from Ipanema - Stan Getz & Astrud Gilberto", "I Want to Hold Your Hand - The Beatles", "Because - The Dave Clark Five", "Any Way You Want It - The Dave Clark Five", "You Never Can Tell - Chuck Berry", "Long Tall Sally - The Beatles", "Leader of the Pack - The Shangri-Las", "Hey, Mr. Sax Man - Boots Randolph", "Bits and Pieces - The Dave Clark Five", "How Do You Do It? - Gerry & The Pacemakers", "Rag Doll - The Four Seasons", "Baby I Need Your Loving - The Four Tops", "What's Easy for Two Is So Hard for One - Mary Wells", "No Particular Place to Go - Chuck Berry", "Don't Throw Your Love Away - The Searchers", "Goodbye Baby (Baby Goodbye) - Solomon Burke", "Com e See About Me - The Supremes", "A Summer Song - Chad & Jeremy", "Glad All Over - The Dave Clark Five", "High Heel Sneakers - Tommy Tucker", "Needles and Pins - The Searchers", "Walk On By - Dionne Warwick", "Ain't That Peculiar - Marvin Gaye", "The House of the Rising Sun - The Animals", "Girl (Why You Wanna Make Me Blue) - The Temptations", "Under the Boardwalk - The Drifters", "Funny How Time Slips Away - Joe Hinton”
-            """
-        
-        songList = parseSongList(from: songData)
     }
 
     func parseSongList(from data: String) -> [SongInfo] {
@@ -83,84 +220,60 @@ struct ContentView: View {
         }
         return parsedList
     }
-    
+
     func searchAppleMusic(for songInfo: SongInfo) async -> Song? {
         let searchTerm = "\(songInfo.title) \(songInfo.artist)"
-        
         let searchRequest = MusicCatalogSearchRequest(term: searchTerm, types: [Song.self])
-        
+
         do {
             let response = try await searchRequest.response()
-            
             if let song = response.songs.first {
                 return song
             } else {
-                print("No results found for \(searchTerm)")
                 addStatusMessage("No results found for \(searchTerm)")
                 return nil
             }
         } catch {
-            print("Error searching Apple Music: \(error.localizedDescription)")
             addStatusMessage("Error searching Apple Music: \(error.localizedDescription)")
             return nil
         }
     }
 
-    func createAppleMusicPlaylist(with songs: [Song]) async {
-        guard !songs.isEmpty else {
-            print("No songs to add to the playlist")
-            addStatusMessage("No songs to add to the playlist")
+    func searchAndCreatePlaylist() async {
+        foundSongs = []
+
+        for songInfo in songList {
+            addStatusMessage("Searching for: \(songInfo.title) by \(songInfo.artist)")
+
+            if let song = await searchAppleMusic(for: songInfo) {
+                addStatusMessage("Found song: \(song.title) by \(song.artistName)")
+                foundSongs.append(song)
+            } else {
+                addStatusMessage("Could not find \(songInfo.title) by \(songInfo.artist)")
+            }
+        }
+
+        addStatusMessage("Total songs found: \(foundSongs.count)")
+    }
+
+    func createPlaylistWithName(_ name: String, songs: [Song]) async {
+        guard !name.isEmpty else {
+            addStatusMessage("Playlist name cannot be empty")
             return
         }
-        
+
         do {
             let playlist = try await MusicLibrary.shared.createPlaylist(
-                name: "Billboard 100 in 1964",
+                name: name,
                 description: "Created using MusicKit",
                 items: songs
             )
-            print("Playlist created: \(playlist.name)")
             addStatusMessage("Playlist created: \(playlist.name)")
         } catch {
-            print("Error creating playlist: \(error.localizedDescription)")
             addStatusMessage("Error creating playlist: \(error.localizedDescription)")
         }
     }
 
-    func searchAndCreatePlaylist() async {
-        var foundSongs: [Song] = []
-        
-        for songInfo in songList {
-            print("Searching for: \(songInfo.title) by \(songInfo.artist)")
-            addStatusMessage("Searching for: \(songInfo.title) by \(songInfo.artist)")
-            
-            if let song = await searchAppleMusic(for: songInfo) {
-                print("Found song: \(song.title) by \(song.artistName)")
-                addStatusMessage("Found song: \(song.title) by \(song.artistName)")
-                foundSongs.append(song)
-            } else {
-                print("Could not find \(songInfo.title) by \(songInfo.artist)")
-                addStatusMessage("Could not find \(songInfo.title) by \(songInfo.artist)")
-            }
-        }
-        
-        print("Total songs found: \(foundSongs.count)")
-        if !foundSongs.isEmpty {
-            addStatusMessage("Total songs found: \(foundSongs.count)")
-            print("Songs found:")
-            for song in foundSongs {
-                print("- \(song.title) by \(song.artistName)")
-                addStatusMessage("- \(song.title) by \(song.artistName)")
-            }
-        } else {
-            addStatusMessage("No songs were found.")
-            print("No songs were found.")
-        }
-        
-        await createAppleMusicPlaylist(with: foundSongs)
-    }
-
-    // Helper function to add a status message and update the UI
     func addStatusMessage(_ message: String) {
         DispatchQueue.main.async {
             statusMessages.append(message)
